@@ -7,7 +7,8 @@ set(CMAKE_C_STANDARD 11)
 find_package(raylib REQUIRED)
 
 # Add the executable
-add_executable(Boomerman main.c)
+add_executable(Boomerman main.c
+)
 
 # Link raylib
 target_link_libraries(Boomerman raylib)

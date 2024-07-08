@@ -17,6 +17,7 @@
 
 #define SEED 2
 
+
 typedef enum {
     TILE_EMPTY,
     TILE_WALL,
@@ -269,6 +270,9 @@ void DrawInstructions(int screenWidth, int screenHeight) {
 }
 
 int main(void) {
+    InitAudioDevice();
+    const Sound menuSound = LoadSound("resources/song_one.wav");
+
     bool errored = false;
     const int screenWidth = GRID_SIZE * MAP_WIDTH;
     const int screenHeight = GRID_SIZE * MAP_HEIGHT;
@@ -296,6 +300,11 @@ int main(void) {
 
         switch (currentState) {
             case GAME_MAIN_MENU:
+
+                if(!IsSoundPlaying(menuSound)) {
+                    PlaySound(menuSound);
+                }
+
                 if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
                     selectedMenuItem = (selectedMenuItem + 1) % mainMenuItemsCount;
                 }
@@ -332,6 +341,7 @@ int main(void) {
                 break;
 
             case GAME_PLAYING_SINGLE:
+                StopSound(menuSound);
                 moveTimer += deltaTime;
                 bombPlaceTimer += deltaTime;
 
@@ -405,6 +415,7 @@ int main(void) {
         switch (currentState) {
             case GAME_MAIN_MENU:
                 DrawMenu(screenWidth, screenHeight, "Boomerman", mainMenuItems, mainMenuItemsCount, selectedMenuItem);
+
                 break;
 
             case GAME_INSTRUCTIONS:
@@ -423,11 +434,15 @@ int main(void) {
                 DrawBombs(&bombList);
                 DrawMenu(screenWidth, screenHeight, "Game Over", restartMenuItems, restartMenuItemsCount, selectedMenuItem);
                 break;
+
+            default:
+                break;
         }
 
         EndDrawing();
     }
 
+    CloseAudioDevice();
     CloseWindow();
 
     if (errored) {
