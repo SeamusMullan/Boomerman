@@ -15,6 +15,8 @@
 #define MAP_HEIGHT 19
 #define EXPLOSION_RANGE 3
 
+#define SEED 2
+
 typedef enum {
     TILE_EMPTY,
     TILE_WALL,
@@ -63,7 +65,7 @@ void InitMap() {
                 map[y][x] = TILE_WALL;
             else if (x % 2 == 0 && y % 2 == 0)
                 map[y][x] = TILE_WALL;
-            else if (rand() % 3 == 0)
+            else if (rand()*SEED % 3 == 0)
                 map[y][x] = TILE_DESTRUCTIBLE;
             else
                 map[y][x] = TILE_EMPTY;
