@@ -1,5 +1,10 @@
 #include "raylib.h"
 #include <stdlib.h>
+#include <stdbool.h>
+
+#define try bool __HadError=false;
+#define catch(x) ExitJmp:if(__HadError)
+#define throw(x) {__HadError=true;goto ExitJmp;}
 
 #define GRID_SIZE 32
 #define PLAYER_SPEED 0.1f
@@ -36,7 +41,20 @@ typedef struct {
     int count;
 } BombList;
 
+typedef enum {
+    GAME_MAIN_MENU,
+    GAME_INSTRUCTIONS,
+    GAME_PLAYING,
+    GAME_RESPAWN
+} GameState;
+
 TileType map[MAP_HEIGHT][MAP_WIDTH];
+GameState currentState = GAME_MAIN_MENU;
+int selectedMenuItem = 0;
+const char* mainMenuItems[] = {"Start Game", "Instructions", "Quit"};
+const int mainMenuItemsCount = 3;
+const char* respawnMenuItems[] = {"Respawn", "Quit to Main Menu"};
+const int respawnMenuItemsCount = 2;
 
 void InitMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
@@ -150,7 +168,7 @@ void UpdateBombs(BombList* list, float deltaTime) {
     }
 }
 
-void DrawBombs(BombList* list) {
+void DrawBombs(const BombList* list) {
     for (int i = 0; i < MAX_BOMBS; i++) {
         if (list->bombs[i].state == BOMB_ACTIVE) {
             DrawCircle((int)list->bombs[i].position.x + GRID_SIZE / 2,
@@ -186,7 +204,69 @@ void DrawBombs(BombList* list) {
     }
 }
 
+bool CheckPlayerCollisionWithExplosion(const Vector2 playerPosition, const BombList* list) {
+    int playerTileX = playerPosition.x / GRID_SIZE;
+    int playerTileY = playerPosition.y / GRID_SIZE;
+
+    for (int i = 0; i < MAX_BOMBS; i++) {
+        if (list->bombs[i].state == BOMB_EXPLODING) {
+            int bombX = list->bombs[i].position.x / GRID_SIZE;
+            int bombY = list->bombs[i].position.y / GRID_SIZE;
+            int dx[] = {0, 1, 0, -1};  // Up, Right, Down, Left
+            int dy[] = {-1, 0, 1, 0};
+
+            // Check center of explosion
+            if (playerTileX == bombX && playerTileY == bombY) {
+                return true;
+            }
+
+            // Check explosion in four directions
+            for (int dir = 0; dir < 4; dir++) {
+                for (int length = 1; length <= list->bombs[i].explosionLength[dir]; length++) {
+                    int newX = bombX + dx[dir] * length;
+                    int newY = bombY + dy[dir] * length;
+                    if (playerTileX == newX && playerTileY == newY) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+void DrawMenu(int screenWidth, int screenHeight, const char* title, const char** items, int itemCount, int selectedItem) {
+    DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, 0.7f));
+    DrawText(title, screenWidth/2 - MeasureText(title, 40)/2, screenHeight/2 - 150, 40, RED);
+
+    for (int i = 0; i < itemCount; i++) {
+        Color itemColor = (i == selectedItem) ? RED : WHITE;
+        DrawText(items[i], screenWidth/2 - MeasureText(items[i], 30)/2, screenHeight/2 + i * 50, 30, itemColor);
+    }
+
+    DrawText("Use Arrow Keys or WASD to navigate, Enter to select", screenWidth/2 - MeasureText("Use Arrow Keys or WASD to navigate, Enter to select", 20)/2, screenHeight - 40, 20, WHITE);
+}
+
+void DrawInstructions(int screenWidth, int screenHeight) {
+    DrawRectangle(0, 0, screenWidth, screenHeight, ColorAlpha(BLACK, 0.7f));
+    DrawText("Instructions", screenWidth/2 - MeasureText("Instructions", 40)/2, 50, 40, RED);
+
+    const char* instructions[] = {
+        "- Use WASD or Arrow Keys to move",
+        "- Press E to place a bomb",
+        "- Destroy walls and avoid explosions",
+        "- Last as long as you can!"
+    };
+
+    for (int i = 0; i < 4; i++) {
+        DrawText(instructions[i], screenWidth/2 - MeasureText(instructions[i], 20)/2, 150 + i * 40, 20, WHITE);
+    }
+
+    DrawText("Press Enter to return to Main Menu", screenWidth/2 - MeasureText("Press Enter to return to Main Menu", 20)/2, screenHeight - 40, 20, WHITE);
+}
+
 int main(void) {
+    bool errored = false;
     const int screenWidth = GRID_SIZE * MAP_WIDTH;
     const int screenHeight = GRID_SIZE * MAP_HEIGHT;
     InitWindow(screenWidth, screenHeight, "Boomerman");
@@ -197,51 +277,151 @@ int main(void) {
     InitBombList(&bombList);
     float bombPlaceTimer = 0.0f;
 
-    InitMap();
+    try
+    {
+        InitMap();
+    }
+    catch(...) {
+        errored = true;
+    }
+
 
     SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
         float deltaTime = GetFrameTime();
-        moveTimer += deltaTime;
-        bombPlaceTimer += deltaTime;
 
-        if (moveTimer >= PLAYER_SPEED) {
-            Vector2 newPosition = playerPosition;
-            if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) newPosition.x += GRID_SIZE;
-            if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) newPosition.x -= GRID_SIZE;
-            if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) newPosition.y -= GRID_SIZE;
-            if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) newPosition.y += GRID_SIZE;
+        switch (currentState) {
+            case GAME_MAIN_MENU:
+                if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                    selectedMenuItem = (selectedMenuItem + 1) % mainMenuItemsCount;
+                }
+                if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                    selectedMenuItem = (selectedMenuItem - 1 + mainMenuItemsCount) % mainMenuItemsCount;
+                }
+                if (IsKeyPressed(KEY_ENTER)) {
+                    switch (selectedMenuItem) {
+                        case 0:  // Start Game
+                            currentState = GAME_PLAYING;
+                            playerPosition = (Vector2){ GRID_SIZE, GRID_SIZE };
+                            InitBombList(&bombList);
+                            InitMap();
+                            break;
+                        case 1:  // Instructions
+                            currentState = GAME_INSTRUCTIONS;
+                            break;
+                        case 2:  // Quit
+                            return 0;
+                        default:
+                            break;
+                    }
+                }
+                break;
 
-            int newTileX = newPosition.x / GRID_SIZE;
-            int newTileY = newPosition.y / GRID_SIZE;
-            if (map[newTileY][newTileX] == TILE_EMPTY) {
-                playerPosition = newPosition;
-            }
+            case GAME_INSTRUCTIONS:
+                if (IsKeyPressed(KEY_ENTER)) {
+                    currentState = GAME_MAIN_MENU;
+                    selectedMenuItem = 0;
+                }
+                break;
 
-            moveTimer = 0.0f;
+            case GAME_PLAYING:
+                moveTimer += deltaTime;
+                bombPlaceTimer += deltaTime;
+
+                if (moveTimer >= PLAYER_SPEED) {
+                    Vector2 newPosition = playerPosition;
+                    if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) newPosition.x += GRID_SIZE;
+                    if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) newPosition.x -= GRID_SIZE;
+                    if (IsKeyDown(KEY_UP) || IsKeyDown(KEY_W)) newPosition.y -= GRID_SIZE;
+                    if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S)) newPosition.y += GRID_SIZE;
+
+                    int newTileX = newPosition.x / GRID_SIZE;
+                    int newTileY = newPosition.y / GRID_SIZE;
+                    if (map[newTileY][newTileX] == TILE_EMPTY) {
+                        playerPosition = newPosition;
+                    }
+
+                    moveTimer = 0.0f;
+                }
+
+                if (IsKeyDown(KEY_E) && bombPlaceTimer >= 0.5f) {
+                    Vector2 bombPos = {
+                        (float)(((int)playerPosition.x / GRID_SIZE) * GRID_SIZE),
+                        (float)(((int)playerPosition.y / GRID_SIZE) * GRID_SIZE)
+                    };
+                    AddBomb(&bombList, bombPos);
+                    bombPlaceTimer = 0.0f;
+                }
+
+                UpdateBombs(&bombList, deltaTime);
+
+                if (CheckPlayerCollisionWithExplosion(playerPosition, &bombList)) {
+                    currentState = GAME_RESPAWN;
+                    selectedMenuItem = 0;
+                }
+                break;
+
+            case GAME_RESPAWN:
+                if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                    selectedMenuItem = (selectedMenuItem + 1) % respawnMenuItemsCount;
+                }
+                if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                    selectedMenuItem = (selectedMenuItem - 1 + respawnMenuItemsCount) % respawnMenuItemsCount;
+                }
+                if (IsKeyPressed(KEY_ENTER)) {
+                    switch (selectedMenuItem) {
+                        case 0:  // Respawn
+                            currentState = GAME_PLAYING;
+                            playerPosition = (Vector2){ GRID_SIZE, GRID_SIZE };
+                            InitBombList(&bombList);
+                            InitMap();
+                            break;
+                        case 1:  // Quit to Main Menu
+                            currentState = GAME_MAIN_MENU;
+                            selectedMenuItem = 0;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                break;
         }
-
-        if (IsKeyDown(KEY_E) && bombPlaceTimer >= 0.5f) {
-            Vector2 bombPos = {
-                (float)(((int)playerPosition.x / GRID_SIZE) * GRID_SIZE),
-                (float)(((int)playerPosition.y / GRID_SIZE) * GRID_SIZE)
-            };
-            AddBomb(&bombList, bombPos);
-            bombPlaceTimer = 0.0f;
-        }
-
-        UpdateBombs(&bombList, deltaTime);
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
-        DrawMap();
-        DrawRectangle((int)playerPosition.x, (int)playerPosition.y, GRID_SIZE, GRID_SIZE, MAROON);
-        DrawBombs(&bombList);
-        DrawText("Move with WASD, place bomb with E", 10, 10, 20, DARKGRAY);
+
+        switch (currentState) {
+            case GAME_MAIN_MENU:
+                DrawMenu(screenWidth, screenHeight, "Boomerman", mainMenuItems, mainMenuItemsCount, selectedMenuItem);
+                break;
+
+            case GAME_INSTRUCTIONS:
+                DrawInstructions(screenWidth, screenHeight);
+                break;
+
+            case GAME_PLAYING:
+                DrawMap();
+                DrawRectangle((int)playerPosition.x, (int)playerPosition.y, GRID_SIZE, GRID_SIZE, MAROON);
+                DrawBombs(&bombList);
+                DrawText("Move with WASD, place bomb with E", 10, 10, 20, DARKGRAY);
+                break;
+
+            case GAME_RESPAWN:
+                DrawMap();
+                DrawBombs(&bombList);
+                DrawMenu(screenWidth, screenHeight, "Game Over", respawnMenuItems, respawnMenuItemsCount, selectedMenuItem);
+                break;
+        }
+
         EndDrawing();
     }
 
     CloseWindow();
+
+    if (errored) {
+        return -1;
+    }
+
     return 0;
 }
