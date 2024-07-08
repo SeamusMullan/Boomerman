@@ -46,17 +46,18 @@ typedef struct {
 typedef enum {
     GAME_MAIN_MENU,
     GAME_INSTRUCTIONS,
-    GAME_PLAYING,
+    GAME_PLAYING_SINGLE,
+    GAME_PLAYING_MULTI_LOCAL,
     GAME_RESPAWN
 } GameState;
 
 TileType map[MAP_HEIGHT][MAP_WIDTH];
 GameState currentState = GAME_MAIN_MENU;
 int selectedMenuItem = 0;
-const char* mainMenuItems[] = {"Start Game", "Instructions", "Quit"};
-const int mainMenuItemsCount = 3;
-const char* respawnMenuItems[] = {"Respawn", "Quit to Main Menu"};
-const int respawnMenuItemsCount = 2;
+const char* mainMenuItems[] = {"Singleplayer", "Multiplayer", "Instructions", "Quit"};
+const int mainMenuItemsCount = 4;
+const char* restartMenuItems[] = {"Restart", "Quit to Main Menu"};
+const int restartMenuItemsCount = 2;
 
 void InitMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
@@ -80,7 +81,7 @@ void InitMap() {
 void DrawMap() {
     for (int y = 0; y < MAP_HEIGHT; y++) {
         for (int x = 0; x < MAP_WIDTH; x++) {
-            Rectangle rect = {x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE};
+            const Rectangle rect = {x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE};
             switch (map[y][x]) {
                 case TILE_WALL:
                     DrawRectangleRec(rect, GRAY);
@@ -304,15 +305,18 @@ int main(void) {
                 if (IsKeyPressed(KEY_ENTER)) {
                     switch (selectedMenuItem) {
                         case 0:  // Start Game
-                            currentState = GAME_PLAYING;
+                            currentState = GAME_PLAYING_SINGLE;
                             playerPosition = (Vector2){ GRID_SIZE, GRID_SIZE };
                             InitBombList(&bombList);
                             InitMap();
                             break;
-                        case 1:  // Instructions
+                        case 1:  // Multiplayer
+                            currentState = GAME_PLAYING_MULTI_LOCAL;
+                            break;
+                        case 2:  // Instructions
                             currentState = GAME_INSTRUCTIONS;
                             break;
-                        case 2:  // Quit
+                        case 3:  // Quit
                             return 0;
                         default:
                             break;
@@ -327,7 +331,7 @@ int main(void) {
                 }
                 break;
 
-            case GAME_PLAYING:
+            case GAME_PLAYING_SINGLE:
                 moveTimer += deltaTime;
                 bombPlaceTimer += deltaTime;
 
@@ -364,17 +368,22 @@ int main(void) {
                 }
                 break;
 
+            case GAME_PLAYING_MULTI_LOCAL:
+                // draw a temporary unavailable screen
+                DrawText("Local Multiplayer not yet implemented...", 10, 10, 20, DARKGRAY);
+                DrawText("Soz... :(", 10, 40, 20, DARKGRAY);
+
             case GAME_RESPAWN:
                 if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
-                    selectedMenuItem = (selectedMenuItem + 1) % respawnMenuItemsCount;
+                    selectedMenuItem = (selectedMenuItem + 1) % restartMenuItemsCount;
                 }
                 if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-                    selectedMenuItem = (selectedMenuItem - 1 + respawnMenuItemsCount) % respawnMenuItemsCount;
+                    selectedMenuItem = (selectedMenuItem - 1 + restartMenuItemsCount) % restartMenuItemsCount;
                 }
                 if (IsKeyPressed(KEY_ENTER)) {
                     switch (selectedMenuItem) {
                         case 0:  // Respawn
-                            currentState = GAME_PLAYING;
+                            currentState = GAME_PLAYING_SINGLE;
                             playerPosition = (Vector2){ GRID_SIZE, GRID_SIZE };
                             InitBombList(&bombList);
                             InitMap();
@@ -402,7 +411,7 @@ int main(void) {
                 DrawInstructions(screenWidth, screenHeight);
                 break;
 
-            case GAME_PLAYING:
+            case GAME_PLAYING_SINGLE:
                 DrawMap();
                 DrawRectangle((int)playerPosition.x, (int)playerPosition.y, GRID_SIZE, GRID_SIZE, MAROON);
                 DrawBombs(&bombList);
@@ -412,7 +421,7 @@ int main(void) {
             case GAME_RESPAWN:
                 DrawMap();
                 DrawBombs(&bombList);
-                DrawMenu(screenWidth, screenHeight, "Game Over", respawnMenuItems, respawnMenuItemsCount, selectedMenuItem);
+                DrawMenu(screenWidth, screenHeight, "Game Over", restartMenuItems, restartMenuItemsCount, selectedMenuItem);
                 break;
         }
 
