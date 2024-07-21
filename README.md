@@ -1,5 +1,9 @@
 ## Bomberman recreation in C using Raylib
 
+## Building
+
+This project was made in CLion, and I would recommend using it to open, edit and run this game as it streamlines the process quite a bit.
+
 ### Main Menu
 ![image](https://github.com/SeamusMullan/Boomerman/assets/43112447/a07723e5-5277-47b8-b76a-c7d40172b476)
 
