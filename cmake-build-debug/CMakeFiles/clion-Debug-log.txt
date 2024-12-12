@@ -1,5 +1,0 @@
-/Users/seamusmullan/Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles" -S /Users/seamusmullan/GitHub/Boomerman -B /Users/seamusmullan/GitHub/Boomerman/cmake-build-debug
--- Found raylib: /opt/homebrew/Cellar/raylib/5.5/lib/libraylib.dylib
--- Configuring done (0.5s)
--- Generating done (0.0s)
--- Build files have been written to: /Users/seamusmullan/GitHub/Boomerman/cmake-build-debug
