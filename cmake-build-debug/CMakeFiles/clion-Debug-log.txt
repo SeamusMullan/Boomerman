@@ -1,4 +1,5 @@
-/home/seamu/.local/share/JetBrains/Toolbox/apps/clion/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/seamu/.local/share/JetBrains/Toolbox/apps/clion/bin/ninja/linux/x64/ninja -G Ninja -S /home/seamu/CLionProjects/Boomerman -B /home/seamu/CLionProjects/Boomerman/cmake-build-debug
--- Configuring done (0.0s)
+/Users/seamusmullan/Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles" -S /Users/seamusmullan/GitHub/Boomerman -B /Users/seamusmullan/GitHub/Boomerman/cmake-build-debug
+-- Found raylib: /opt/homebrew/Cellar/raylib/5.5/lib/libraylib.dylib
+-- Configuring done (0.5s)
 -- Generating done (0.0s)
--- Build files have been written to: /home/seamu/CLionProjects/Boomerman/cmake-build-debug
+-- Build files have been written to: /Users/seamusmullan/GitHub/Boomerman/cmake-build-debug

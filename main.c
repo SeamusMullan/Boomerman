@@ -269,6 +269,15 @@ void DrawInstructions(int screenWidth, int screenHeight) {
     DrawText("Press Enter to return to Main Menu", screenWidth/2 - MeasureText("Press Enter to return to Main Menu", 20)/2, screenHeight - 40, 20, WHITE);
 }
 
+bool bombAtPosition(Vector2 vector2, BombList * bomb_list) {
+    for (int i = 0; i < MAX_BOMBS; i++) {
+        if (bomb_list->bombs[i].state == BOMB_ACTIVE && bomb_list->bombs[i].position.x == vector2.x && bomb_list->bombs[i].position.y == vector2.y) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int main(void) {
     InitAudioDevice();
     const Sound menuSound = LoadSound("resources/song_one.wav");
@@ -291,7 +300,6 @@ int main(void) {
     catch(...) {
         errored = true;
     }
-
 
     SetTargetFPS(60);
 
@@ -354,7 +362,7 @@ int main(void) {
 
                     int newTileX = newPosition.x / GRID_SIZE;
                     int newTileY = newPosition.y / GRID_SIZE;
-                    if (map[newTileY][newTileX] == TILE_EMPTY) {
+                    if (map[newTileY][newTileX] == TILE_EMPTY && !bombAtPosition(newPosition, &bombList)) {
                         playerPosition = newPosition;
                     }
 
